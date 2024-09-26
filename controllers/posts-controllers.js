@@ -1,5 +1,6 @@
 const uuid = require("uuid");
 const HttpError = require("../models/http-error");
+const { validationResult } = require("express-validator");
 
 let DUMMY_POSTS = [
   {
@@ -31,8 +32,12 @@ const getPostById = (req, res) => {
 };
 
 const createPosts = (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    throw new HttpError("유효하지 않은 입력입니다.", 422);
+  }
   const { title, tags, date, author, content } = req.body;
-  // const title = req.body.title;
   const createdPost = {
     id: uuid.v4(),
     title,
