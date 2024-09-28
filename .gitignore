@@ -1,1 +1,6 @@
+.env*.local
+.env
+
 node_modules
+.db
+*.db-journal
