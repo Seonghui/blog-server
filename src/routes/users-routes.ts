@@ -2,10 +2,11 @@ import { Router } from "express";
 import { check } from "express-validator";
 
 import * as usersController from "../controllers/users-controllers";
+import { authMiddleware } from "../middlewares/auth-middleware";
 
 const router = Router();
 
-router.get("/", usersController.getUsers);
+router.get("/", authMiddleware, usersController.getUsers);
 
 router.post(
   "/signup",

@@ -159,7 +159,7 @@ const refreshAccessToken = async (
   let existingUser: User | null;
   try {
     existingUser = await prisma.user.findUnique({
-      where: { id: payload.userId }, // payload.userId가 number 타입이어야 함
+      where: { id: payload.id },
     });
   } catch (err) {
     return next(new HttpError("유저를 찾을 수 없습니다.", 500));
