@@ -20,4 +20,6 @@ router.post(
 
 router.post("/login", usersController.login);
 
+router.post("/refresh-token", usersController.refreshAccessToken);
+
 module.exports = router;

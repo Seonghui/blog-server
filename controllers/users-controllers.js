@@ -2,6 +2,11 @@ const { PrismaClient } = require("@prisma/client");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const HttpError = require("../models/http-error");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} = require("../utils/jwt");
 
 const prisma = new PrismaClient();
 
@@ -76,7 +81,14 @@ const signup = async (req, res, next) => {
     return next(error);
   }
 
-  res.status(201).json({ user: createdUser });
+  // 액세스 토큰과 리프레시 토큰 생성
+  const accessToken = generateAccessToken(createdUser);
+  const refreshToken = generateRefreshToken(createdUser);
+
+  res.status(201).json({
+    accessToken,
+    refreshToken,
+  });
 };
 
 const login = async (req, res, next) => {
@@ -122,8 +134,51 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
-  res.json({ user: existingUser });
+  // 액세스 토큰과 리프레시 토큰 생성
+  const accessToken = generateAccessToken(existingUser);
+  const refreshToken = generateRefreshToken(existingUser);
+
+  res.json({
+    accessToken,
+    refreshToken,
+  });
 };
+
+const refreshAccessToken = async (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return next(new HttpError("리프레시 토큰이 제공되지 않았습니다.", 403));
+  }
+
+  let payload;
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch (err) {
+    return next(new HttpError("유효하지 않은 리프레시 토큰입니다.", 403));
+  }
+
+  let existingUser;
+  try {
+    existingUser = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+  } catch (err) {
+    return next(new HttpError("유저를 찾을 수 없습니다.", 500));
+  }
+
+  if (!existingUser) {
+    return next(new HttpError("유저를 찾을 수 없습니다.", 404));
+  }
+
+  const newAccessToken = generateAccessToken(existingUser);
+
+  res.json({
+    accessToken: newAccessToken,
+  });
+};
+
+exports.refreshAccessToken = refreshAccessToken;
 
 exports.getUsers = getUsers;
 exports.signup = signup;
