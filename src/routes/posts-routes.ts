@@ -1,19 +1,22 @@
-const express = require("express");
-const HttpError = require("../models/http-error");
-const { check } = require("express-validator");
+import { Router } from "express";
+import { check } from "express-validator";
+import HttpError from "../models/http-error";
+import * as postsControllers from "../controllers/posts-controllers";
 
-const postsControllers = require("../controllers/posts-controllers");
-
-const router = express.Router();
+const router = Router();
 
 router.get("/", postsControllers.getPosts);
+
 router.post(
   "/",
   [check("title").not().isEmpty(), check("content").not().isEmpty()],
   postsControllers.createPosts
 );
+
 router.get("/:id", postsControllers.getPostById);
+
 router.patch("/:id", postsControllers.updatePost);
+
 router.delete("/:id", postsControllers.deletePost);
 
-module.exports = router;
+export default router;

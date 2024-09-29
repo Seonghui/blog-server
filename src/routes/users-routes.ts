@@ -1,9 +1,9 @@
-const express = require("express");
-const { check } = require("express-validator");
+import { Router } from "express";
+import { check } from "express-validator";
 
-const usersController = require("../controllers/users-controllers");
+import * as usersController from "../controllers/users-controllers";
 
-const router = express.Router();
+const router = Router();
 
 router.get("/", usersController.getUsers);
 
@@ -22,4 +22,4 @@ router.post("/login", usersController.login);
 
 router.post("/refresh-token", usersController.refreshAccessToken);
 
-module.exports = router;
+export default router;
