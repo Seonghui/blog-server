@@ -1,98 +1,123 @@
 import { Request, Response, NextFunction } from "express";
-import { v4 as uuidv4 } from "uuid";
 import { validationResult } from "express-validator";
 import HttpError from "../models/http-error";
+import { PrismaClient } from "@prisma/client";
 
-// 게시물 타입 정의
-interface Post {
-  id: string;
-  title: string;
-  tags: string[];
-  date: string;
-  updated_date?: string;
-  author: string;
-  content: string;
-}
 
-// 더미 데이터
-let DUMMY_POSTS: Post[] = [
-  {
-    id: "p1",
-    title: "포스트 1",
-    tags: ["tag1", "tag2"],
-    date: "2023-12-24",
-    updated_date: "2023-12-24",
-    author: "stella",
-    content: "포스트 1 내용",
-  },
-];
+const prisma = new PrismaClient();
 
 // 게시물 전체 조회
-const getPosts = (req: Request, res: Response, next: NextFunction) => {
-  res.json({ posts: DUMMY_POSTS });
+const getPosts = async (req: Request, res: Response, next: NextFunction) => {
+  let posts;
+  try {
+    posts = await prisma.post.findMany({
+      include: {
+        author: true,  // 게시물 작성자 정보 포함
+      },
+    });
+  } catch (err) {
+    console.log(err)
+    const error = new HttpError("게시물을 불러오는데 실패했습니다.", 500);
+    return next(error);
+  }
+  return res.json({ posts });
 };
 
 // ID로 게시물 조회
-const getPostById = (req: Request, res: Response, next: NextFunction) => {
+const getPostById = async (req: Request, res: Response, next: NextFunction) => {
   const postId = req.params.id;
-  const post = DUMMY_POSTS.find((item) => item.id === postId);
+
+  let post;
+  try {
+    post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        author: true,
+      },
+    });
+  } catch (err) {
+    const error = new HttpError("게시물을 찾을 수 없습니다.", 500);
+    return next(error);
+  }
 
   if (!post) {
-    throw new HttpError("게시글을 찾을 수 없습니다.", 404);
+    const error = new HttpError("해당 게시물이 없습니다.", 404);
+    return next(error);
   }
 
   res.json({ post });
 };
 
 // 게시물 생성
-const createPosts = (req: Request, res: Response, next: NextFunction) => {
+const createPosts = async (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
+  const { userId: authorId } = req.userData
 
   if (!errors.isEmpty()) {
     throw new HttpError("유효하지 않은 입력입니다.", 422);
   }
 
-  const { title, tags, date, author, content } = req.body;
+  const { title, tags, content } = req.body;
 
-  const createdPost: Post = {
-    id: uuidv4(),
-    title,
-    tags,
-    date,
-    author,
-    content,
-  };
-
-  DUMMY_POSTS.push(createdPost);
+  let createdPost;
+  try {
+    createdPost = await prisma.post.create({
+      data: {
+        title,
+        authorId, // 유저 ID를 authorId로 연결
+        content,
+        tags
+      },
+    });
+  } catch (err) {
+    console.error(err)
+    const error = new HttpError("게시물을 생성하는데 실패했습니다.", 500);
+    return next(error);
+  }
 
   res.status(201).json({ post: createdPost });
 };
 
 // 게시물 수정
-const updatePost = (req: Request, res: Response, next: NextFunction) => {
+const updatePost = async (req: Request, res: Response, next: NextFunction) => {
   const { title, content, tags } = req.body;
   const postId = req.params.id;
 
-  const updatedPost = { ...DUMMY_POSTS.find((item) => item.id === postId) } as Post;
-  const postsIndex = DUMMY_POSTS.findIndex((item) => item.id === postId);
-
-  if (!updatedPost) {
-    throw new HttpError("게시글을 찾을 수 없습니다.", 404);
+  let updatedPost;
+  try {
+    updatedPost = await prisma.post.update({
+      where: { id: postId },
+      data: {
+        title,
+        content,
+        tags
+      },
+      include: {
+        author: true,
+      },
+    });
+  } catch (err) {
+    console.log(err)
+    const error = new HttpError("게시물을 업데이트할 수 없습니다.", 500);
+    return next(error);
   }
-
-  updatedPost.title = title;
-  updatedPost.content = content;
-  updatedPost.tags = tags;
-
-  DUMMY_POSTS[postsIndex] = updatedPost;
 
   res.status(200).json({ post: updatedPost });
 };
 
 // 게시물 삭제
-const deletePost = (req: Request, res: Response, next: NextFunction) => {
+const deletePost = async (req: Request, res: Response, next: NextFunction) => {
   const postId = req.params.id;
-  DUMMY_POSTS = DUMMY_POSTS.filter((item) => item.id !== postId);
+
+  try {
+    await prisma.post.delete({
+      where: { id: postId },
+    });
+  } catch (err) {
+    const error = new HttpError("포스트를 삭제하는데 실패했습니다.", 500);
+    return next(error);
+  }
+
   res.status(200).json({ message: "게시글이 삭제되었습니다." });
 };
 
