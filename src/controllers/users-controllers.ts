@@ -16,7 +16,7 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     users = await prisma.user.findMany();
   } catch (err) {
-    const error = new HttpError("유저를 불러오는데 실패했습니다.", 500);
+    const error = new HttpError("유저를 불러오는데 실패했습니다.", 500, err);
     return next(error);
   }
   res.json({ users });
@@ -45,7 +45,8 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
     return next(
       new HttpError(
         "회원가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        500
+        500,
+        err
       )
     );
   }
@@ -64,7 +65,7 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
     hashedPassword = await bcrypt.hash(password, 12);
   } catch (err) {
     return next(
-      new HttpError("사용자를 생성할 수 없습니다. 다시 시도해주세요.", 500)
+      new HttpError("사용자를 생성할 수 없습니다. 다시 시도해주세요.", 500, err)
     );
   }
 
@@ -81,7 +82,7 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err) {
     return next(
-      new HttpError("회원가입 중 오류가 발생했습니다. 다시 시도해주세요.", 500)
+      new HttpError("회원가입 중 오류가 발생했습니다. 다시 시도해주세요.", 500, err)
     );
   }
 
@@ -104,7 +105,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     });
   } catch (err) {
     return next(
-      new HttpError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.", 500)
+      new HttpError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.", 500, err)
     );
   }
 
@@ -119,7 +120,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     isValidPassword = await bcrypt.compare(password, existingUser.password!);
   } catch (err) {
     return next(
-      new HttpError("로그인에 실패했습니다. 다시 시도해주세요.", 500)
+      new HttpError("로그인에 실패했습니다. 다시 시도해주세요.", 500, err)
     );
   }
 
@@ -162,7 +163,7 @@ const refreshAccessToken = async (
       where: { id: payload.id },
     });
   } catch (err) {
-    return next(new HttpError("유저를 찾을 수 없습니다.", 500));
+    return next(new HttpError("유저를 찾을 수 없습니다.", 500, err));
   }
 
   if (!existingUser) {

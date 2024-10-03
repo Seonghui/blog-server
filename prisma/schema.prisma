@@ -9,12 +9,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id         String   @id @default(uuid())
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
   username   String   @unique
   email      String   @unique
   password   String?
@@ -22,34 +22,16 @@ model User {
   avatar     String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  posts      Post[]   // 1:N 관계 설정
+  posts      Post[]
 }
 
 model Post {
-  id          String   @id @default(uuid())
-  title       String
-  date        DateTime @default(now())
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  date         DateTime @default(now())
   updated_date DateTime @updatedAt
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content     String
-  // SQLite에서는 원시타입 배열을 지원하지 않아 Post와 Tag 분리
-  tags        PostTag[] // N:M 관계 설정
-}
-
-model Tag {
-  id   String @id @default(uuid())
-  name String @unique
-  posts PostTag[]
-}
-
-// 태그와 게시글 간의 다대다 관계를 표현하기 위해 중간 테이블(모델) 사용
-model PostTag {
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId String
-
-  tag    Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  tagId  String
-
-  @@id([postId, tagId])
+  authorId     String   @db.ObjectId
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content      String
+  tags         String[]
 }
